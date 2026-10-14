@@ -1,107 +1,123 @@
-# AcxiomCRM
+# AcxiomCRM (Streamlit version)
 
-A small ASP.NET Core MVC CRM built against the 19-page AcxiomCRM assignment. It includes the mandatory modules added in section 17, including Activity Management, registration and ASP.NET Core Identity.
+A simple CRM (Customer Relationship Management) prototype written in Python with Streamlit and SQLite.
+It has three roles: **Admin**, **Manager** and **Sales Executive**. Together they manage customers, leads,
+opportunities, follow-ups and activities.
 
-## Run locally
+## How to run
 
-Install the .NET 9 SDK, then run from this folder:
-
-```sh
-dotnet restore
-dotnet run
+```bash
+pip install -r requirements.txt
+streamlit run app.py
 ```
 
-Open http://localhost:5080. The first start creates the SQLite database and development sample records. No separate database server is needed. Bootstrap, jQuery validation and Chart.js are stored locally, so the screens do not depend on a CDN.
+Open http://localhost:8501. On the first start the app creates `crm_data.db` and fills it with demo data.
+To start fresh, delete `crm_data.db` and run the app again.
 
-The current project targets .NET 9 because that SDK is installed in this workspace. Before internet-facing deployment, move to a currently supported .NET release and current matching Identity/EF packages; see `docs/DEPLOYMENT.md`.
+### Demo accounts (password for all: `Acxiom@123`)
 
-## Development accounts
-
-| Role | Email | Password |
-| --- | --- | --- |
-| Admin | admin@acxiom.test | Acxiom@123 |
-| Manager | manager@acxiom.test | Acxiom@123 |
-| Sales Executive | sales@acxiom.test | Acxiom@123 |
-| Second Sales Executive | sales2@acxiom.test | Acxiom@123 |
-
-These credentials are for local assignment demonstration only. Demo seeding runs only in Development. Real passwords are stored as ASP.NET Core Identity hashes, never as plain text. The database and Data Protection keys are excluded from source control.
-
-## Included
-
-- Identity registration, login and logout; configurable lockout; password policy; protected cookies and anti-forgery checks.
-- Admin, Manager and SalesExecutive roles with server-enforced ownership checks. Self-registration always assigns SalesExecutive.
-- Customer, lead, opportunity, follow-up and activity CRUD, related records and history.
-- Qualified lead conversion, customer duplicate checking and an optional opportunity created from a positive expected value.
-- Date, amount, probability, email, Indian mobile, required-field and length validation.
-- Three role dashboards on one URL, each with its own named menu sections:
-  - **Administrator** – Control Centre, User Administration, Security & Compliance, Business Records, Insights. Dashboard: system access cards (users, active, locked, failed sign-ins), company snapshot, pipeline chart, users by role, latest audit events, monthly sales, team table.
-  - **Sales Manager** – Overview, Team Management, Sales Pipeline, Customer Relations. Dashboard: team snapshot, pipeline vs won per executive, lead funnel, team performance table, overdue follow-ups, deals closing in 30 days.
-  - **Sales Executive** – My Workspace, My Sales, My Insights. Dashboard: my numbers, today's agenda with one-click *Mark done*, my lead status, my pipeline, deals closing soon, monthly sales, recent activities.
-- Team performance page (Manager/Admin): leads, conversions, open/weighted pipeline, won value, win rate, activities and overdue follow-ups per executive.
-- My profile for every role: change display name, change password (current password required; other sessions are signed out).
-- Black-and-white "liquid glass" UI with a light/dark theme switch, remembered per browser. Works down to phone width.
-- Search, filters, sorting, pagination, eight reports and CSV export.
-- Admin user creation, role changes, deactivation, password reset and account unlock.
-- Audited changes, including safe old/new values, actor, time, record ID and IP address.
-- Secured JSON APIs using explicit DTOs, shared business rules and meaningful HTTP codes.
-
-## Project structure
-
-| Folder | Purpose |
+| Role | Email |
 | --- | --- |
-| Controllers | HTTP requests, authentication, screens, APIs and reports |
-| Models | Identity user and CRM database entities |
-| Data | EF Core database setup and development seed data |
-| Services | Ownership, workflow rules, conversion and auditing |
-| ViewModels | Form input models, validation attributes and response DTOs |
-| Views | Razor screens with Bootstrap and inline validation |
-| wwwroot | Local CSS, JavaScript, icons and third-party libraries |
-| tests | xUnit project (`tests/AcxiomCRM.Tests`), Python acceptance checks and `run_all_checks.sh` |
-| docs | Requirements mapping, API guide, explanation and deployment notes |
+| Admin | admin@acxiom.test |
+| Manager | manager@acxiom.test |
+| Sales Executive | sales@acxiom.test |
+| Sales Executive | sales2@acxiom.test |
 
-## Demonstrate the main workflow
+### Run the tests
 
-1. Log in as `sales@acxiom.test`.
-2. Add a lead with valid contact details and a positive expected value.
-3. Edit it to Contacted, then Qualified.
-4. Open its details and select Convert lead. A customer and opportunity are created together.
-5. Schedule a follow-up for that customer and record a call under Activities.
-6. Complete the follow-up. Move the opportunity to Won with probability 100.
-7. View the pipeline and conversion reports.
-8. Log in as Admin to inspect the audit events. Compare the second executive's visible records.
-
-## Checks
-
-Three layers of tests, all run by one script and by the GitHub Actions pipeline (`.github/workflows/ci.yml`) on every push and pull request:
-
-| Layer | What it covers | Command |
-| --- | --- | --- |
-| Unit tests (xUnit, 65) | Business rules from the PDF on `CrmService` with an in-memory database, validation messages, helpers, reports, CSV safety | `dotnet test AcxiomCRM.sln` |
-| API and workflow checks (Python, 209) | Every role, page access, ownership, CRUD, conversion, Mark done, reports, exports, search | `python3 tests/check_api.py http://127.0.0.1:5080` |
-| Security checks (Python, 70) | Registration, password policy, lockout/unlock, role change, deactivation, password reset and change, database column names | `python3 tests/check_security.py http://127.0.0.1:5080` |
-
-Run everything (build with warnings as errors → unit tests → start the app on a throw-away database → API checks → security checks):
-
-```sh
-bash tests/run_all_checks.sh
+```bash
+python -m pytest tests
 ```
 
-It takes about three minutes because sign-in is limited to 15 attempts per minute per IP and the security checks wait for a fresh window. Run the Python scripts on their own only against a disposable local database: they create and soft-delete test records and leave an inactive test account.
+## Folder structure
 
-See `docs/TEST_RESULTS.md` for the recorded verification, `docs/REQUIREMENTS.md` for the PDF compliance map and `docs/EXPLAIN.md` for a code walkthrough.
+```
+app.py                  Start here. Login check, sidebar menu per role, picks which page to show.
 
-## Scope choices
+logic/                  Plain Python. No Streamlit code in here.
+  settings.py           Fixed lists (roles, statuses, stages) and small helpers (dates, ₹ format).
+  database.py           SQLite connection and the CREATE TABLE statements.
+  auth.py               Password hashing, login with lockout, register, change password.
+  users.py              Admin user management (add, edit, role change, unlock).
+  records.py            The main CRM rules: list, filter, save, delete, mark done, convert lead.
+  dashboard_numbers.py  Numbers for the dashboards and the team performance table.
+  reports.py            The 8 reports and CSV export.
+  audit.py              Writes the history (audit log) of every change.
+  sample_data.py        Demo users and records created on first start.
 
-- One shared sales team: managers manage all business records; sales executives see only their assignments. There is no separate team hierarchy in the assignment's mandatory data model.
-- Deletes are soft deletes, with dependency checks and audit history. The UI does not provide an undelete function. Unique customer contacts remain reserved after deletion.
-- Related records share their owner's scope. Reassignment is blocked when it would leave dependent records inconsistent.
-- Date rules use India time. Stored timestamps and audit displays use UTC. CRM date filters use India dates; audit date filters use UTC dates.
-- The selected dashboard period filters records by creation date. Monthly sales uses actual outcome dates across the last six months. Pending reminders always show current outstanding work.
-- Notifications are in-app reminders. No emails or SMS are sent. Admin password reset is the supported reset workflow; there is no email-based forgot-password service.
-- Database tables and columns use the exact names from section 17.3 of the assignment (`Customer.CustomerName`, `Lead.AssignedTo`, `FollowUp.FollowUpDate`, `AuditLog.IpAddress` …). See `docs/REQUIREMENTS.md` for the full section-by-section compliance map.
-- CRM records are always assigned to an active Sales Executive, as the assignment describes.
-- The initial database is created with `EnsureCreated`. A persistent production system should use a reviewed EF migration workflow for later schema changes.
+screens/                One file per page. Only Streamlit UI code.
+  helpers.py            Shared bits: switching pages, messages, tables, period filter.
+  login_page.py         Log in and Register tabs.
+  dashboard_page.py     The dashboard (different sections for each role).
+  records_page.py       List / details / add / edit for all five CRM modules.
+  team_page.py          Team performance (Admin, Manager).
+  reports_page.py       Reports with filters and CSV download.
+  search_page.py        Search across all modules.
+  users_page.py         Users & access, add/edit user, roles (Admin).
+  profile_page.py       My profile: change name and password.
 
-## Original code and dependencies
+tests/test_crm_rules.py Tests for the business rules.
+.streamlit/config.toml  Plain light theme.
+```
 
-The application-specific logic, views and styles were written for this assignment. ASP.NET templates and third-party libraries remain third-party work, with their notices retained. Do not describe framework/vendor code as your own. There is no reliable guarantee that an AI or plagiarism detector will classify code in a particular way.
+**Main idea:** `screens/` only *shows* things, and `logic/` *decides* things. When you click Save, the screen
+gathers the form values into a dictionary and calls a function in `logic/records.py`. If a rule fails, that
+function raises `CrmError("message")`, and the screen shows the message in red.
+
+## How it works (for explaining)
+
+1. **Every click reruns `app.py` from top to bottom.** That is how Streamlit works. Values that must survive a
+   rerun live in `st.session_state`:
+   - `user_id`: who is logged in
+   - `page`: which page is open, e.g. `("records", "leads")`
+   - `record_mode` / `record_id`: list, details, edit or new, and which record
+2. **Login** (`logic/auth.py`): passwords are stored as salted PBKDF2 hashes, never as plain text. Five wrong
+   passwords lock the account for 15 minutes. An Admin can unlock it.
+3. **Roles**: the sidebar menu differs per role (`ADMIN_MENU`, `MANAGER_MENU`, `SALES_EXECUTIVE_MENU` in
+   `app.py`). The real protection sits in `logic/`:
+   - `load_records()` only returns a Sales Executive's own records.
+   - Reports check `can_open()`.
+   - The user pages check the role in `show_page()`.
+4. **Soft delete**: deleting sets `deleted = 1`, so the row stays in the database for history. A record that other
+   records point to cannot be deleted.
+5. **Audit log**: `add_audit_entry()` writes one row per login, create, update, delete, status change and convert.
+
+## Business rules (all in `logic/records.py`)
+
+- Records are assigned to an active Sales Executive. A Sales Executive can only assign to themselves.
+- Customers and leads need a valid email and a 10-digit Indian mobile number (starting with 6–9).
+  Customer email and phone must be unique, including deleted customers.
+- Lead status moves New → Contacted → Qualified (or Unqualified / Lost). A new lead always starts as New.
+- **Convert lead** works only on a Qualified lead. It creates a customer, plus an opportunity when the expected
+  value is above 0. Converted leads are read-only.
+- Opportunity amount must be above 0. An open opportunity's close date cannot be in the past. Won needs 100%
+  probability and Lost needs 0%. Status follows the stage.
+- A follow-up or activity is linked to exactly one customer, lead or opportunity owned by the same person.
+  A planned follow-up cannot be in the past. "Overdue" means Planned with a past date.
+- Completing a follow-up for a New lead moves that lead to Contacted.
+- All date rules use the Indian date (UTC+5:30).
+
+## Where to change things
+
+| I want to... | Change |
+| --- | --- |
+| Add a status, stage, priority or activity type | `logic/settings.py` |
+| Change a validation rule | `validate_...` functions in `logic/records.py` |
+| Add a field to customers | `database.py` (table), `MODULE_COLUMNS` in `records.py`, the form in `screens/records_page.py` |
+| Change the sidebar menu | `ADMIN_MENU` / `MANAGER_MENU` / `SALES_EXECUTIVE_MENU` in `app.py` |
+| Add a report | `REPORTS` and `build_report()` in `logic/reports.py` |
+| Change lockout settings | `MAX_FAILED_LOGINS` / `LOCK_MINUTES` in `logic/settings.py` |
+| Change the demo data | `logic/sample_data.py`, then delete `crm_data.db` |
+
+## Differences from the old ASP.NET version
+
+This is a simplified prototype. The following were left out on purpose:
+
+- The JSON API (Streamlit apps do not serve APIs).
+- IP addresses in the audit log.
+- Per-IP rate limiting on login. Account lockout is still there.
+- Signing out other sessions after a password change. A deactivated user is still logged out on their next click.
+- Record IDs are simple numbers instead of GUIDs.
+- Multi-step actions such as lead conversion are no longer wrapped in one database transaction.
+
+The old C# code is still in git history (commit `c3a5caf`) if you ever need it.

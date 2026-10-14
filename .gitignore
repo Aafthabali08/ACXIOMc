@@ -1,24 +1,21 @@
-# Build output
-bin/
-obj/
-TestResults/
-test-results/
-
-# Local database and Data Protection keys (never commit these)
-App_Data/
+# Local database (delete it to start again with fresh demo data)
 *.db
-*.db-shm
-*.db-wal
-.env
+*.db-journal
 
-# Generated archives and outdated screenshots
+# Old ASP.NET leftovers that may still be on disk
+App_Data/
 output/
 docs/dashboard.jpg
 
+# Python
+__pycache__/
+.pytest_cache/
+.venv/
+
 # Editors and OS files
-.vs/
 .vscode/
 .idea/
-*.user
 .DS_Store
-__pycache__/
+
+# Local editor/tool settings
+.claude/

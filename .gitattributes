@@ -1,8 +1,4 @@
-# Normalise line endings so the project builds the same on Windows, macOS and Linux.
+# Normalise line endings so the project behaves the same on Windows, macOS and Linux.
 * text=auto
-*.sh text eol=lf
-*.cs text diff=csharp
-*.cshtml text
 *.png binary
 *.jpg binary
-*.ico binary

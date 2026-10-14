@@ -1,0 +1,6 @@
+# Plain default look: light theme, no custom colours.
+[theme]
+base = "light"
+
+[client]
+toolbarMode = "minimal"

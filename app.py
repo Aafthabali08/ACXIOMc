@@ -119,9 +119,17 @@ def show_page(user):
         st.error("You do not have access to this page.")
 
 
-def main():
+@st.cache_resource
+def prepare_database():
+    """Runs once when the server starts (not on every click). Streamlit makes other
+    browser tabs wait until it is done, so the demo data is never created twice.
+    If you delete crm_data.db, restart the app so this runs again."""
     create_tables()
     create_sample_data_if_empty()
+
+
+def main():
+    prepare_database()
     show_saved_message()
 
     # Load the user fresh from the database on every run, so a deactivated

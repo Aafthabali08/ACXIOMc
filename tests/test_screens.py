@@ -129,3 +129,78 @@ def test_log_out():
     app = logged_in_app("sales@acxiom.test")
     click(app, "Log out")
     assert app.title[0].value == "AcxiomCRM"
+
+
+# ---------- Extra checks: every module, every report, empty accounts, paging ----------
+
+def open_page(email, page, mode="list", record_id=None):
+    app = AppTest.from_file("../app.py", default_timeout=30)
+    app.session_state["user_id"] = auth.find_user_by_email(email)["id"]
+    app.session_state["page"] = page
+    app.session_state["record_mode"] = mode
+    app.session_state["record_id"] = record_id
+    app.session_state["record_preset"] = {}
+    return app.run()
+
+
+@pytest.mark.parametrize("module", ["customers", "leads", "opportunities", "followups", "activities"])
+@pytest.mark.parametrize("mode", ["details", "edit", "new"])
+def test_details_edit_and_new_pages_for_every_module(module, mode):
+    manager = auth.find_user_by_email("manager@acxiom.test")
+    record_id = records.get_records(module, manager)[0]["id"]
+    app = open_page("manager@acxiom.test", ("records", module), mode, record_id)
+    assert_no_errors(app, f"{module} {mode}")
+
+
+@pytest.mark.parametrize("report", ["pipeline", "conversion", "customers", "leads", "opportunities",
+                                    "followups", "user-activity", "audit"])
+def test_every_report_page(report):
+    app = open_page("admin@acxiom.test", ("reports", report))
+    assert_no_errors(app, report)
+    for sort in ["oldest", "name"]:
+        app.radio[0].set_value(sort).run()
+        assert_no_errors(app, f"{report} {sort}")
+
+
+def test_sales_executive_cannot_open_admin_pages():
+    for page in [("users", None), ("team", None)]:
+        app = open_page("sales@acxiom.test", page)
+        assert app.error[0].value == "You do not have access to this page."
+
+
+def test_brand_new_account_with_no_records():
+    auth.register("Fresh User", "fresh@example.test", "Fresh@123", "Fresh@123")
+    app = logged_in_app("fresh@example.test")
+    for label in [button.label for button in app.sidebar.button if button.label != "Log out"]:
+        click(app, label)
+        assert_no_errors(app, label)
+
+
+def test_custom_period_needs_both_dates():
+    app = logged_in_app("manager@acxiom.test")
+    app.selectbox(key="dashboard_period").select_index(4).run()   # Custom range
+    assert app.warning[0].value == "Select both dates for a custom range."
+
+
+def test_page_number_resets_when_filter_shrinks_the_list():
+    rahul = auth.find_user_by_email("sales@acxiom.test")
+    for number in range(20):   # 5 demo leads + 20 = 25 leads = 3 pages
+        records.save_record("leads", {
+            "name": f"Paging Lead {number}", "email": f"paging{number}@example.test", "phone": f"90000001{number:02d}",
+            "company": "", "source": "", "priority": "Normal", "expected_value": 0.0, "status": "New",
+            "owner_id": rahul["id"], "notes": ""}, rahul)
+    app = open_page("sales@acxiom.test", ("records", "leads"))
+    app.number_input(key="leads_page").set_value(3).run()
+    assert_no_errors(app, "page 3")
+    app.text_input(key="leads_search").input("Paging Lead 1").run()   # 11 matches -> only 2 pages
+    assert_no_errors(app, "after search")
+
+
+def test_delete_through_the_details_page():
+    rahul = auth.find_user_by_email("sales@acxiom.test")
+    activity = records.get_records("activities", rahul)[0]
+    app = open_page("sales@acxiom.test", ("records", "activities"), "details", activity["id"])
+    app.checkbox(key=f"confirm_delete_activities_{activity['id']}").check().run()
+    click(app, "Delete")
+    with pytest.raises(records.CrmError):
+        records.find_record("activities", activity["id"], rahul)

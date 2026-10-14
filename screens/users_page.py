@@ -20,7 +20,11 @@ def show(user, option=None):
     elif option == "new":
         user_form(user, None)
     elif option == "edit":
-        user_form(user, get_user(st.session_state.get("record_id")))
+        existing = get_user(st.session_state.get("record_id"))
+        if existing is None:
+            st.error("User not found.")
+        else:
+            user_form(user, existing)
     else:
         list_view(user)
 

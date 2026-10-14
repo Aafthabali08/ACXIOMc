@@ -1,11 +1,10 @@
 """Team performance (Admin and Manager): one row per sales executive."""
 
-import pandas as pd
 import streamlit as st
 
 from logic.dashboard_numbers import team_performance
 from logic.settings import rupees, win_rate
-from screens.helpers import period_filter, show_table
+from screens.helpers import bar_chart, period_filter, show_table
 
 
 def show(user):
@@ -33,6 +32,7 @@ def show(user):
 
     if team:
         st.subheader("Open pipeline vs won value")
-        chart = pd.DataFrame(team).set_index("name")[["open_pipeline", "won_value"]]
-        chart.columns = ["Open pipeline", "Won value"]
-        st.bar_chart(chart)
+        bar_chart([row["name"] for row in team], {
+            "Open pipeline": [row["open_pipeline"] for row in team],
+            "Won value": [row["won_value"] for row in team],
+        })

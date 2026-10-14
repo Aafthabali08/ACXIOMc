@@ -105,7 +105,7 @@ def list_view(user, module):
 
     # Simple paging: 10 rows per page.
     page_count = max(1, (len(rows) + PAGE_SIZE - 1) // PAGE_SIZE)
-    page = st.number_input("Page", min_value=1, max_value=page_count, value=1, key=f"{module}_page") if page_count > 1 else 1
+    page = st.number_input("Page", min_value=1, max_value=page_count, key=f"{module}_page") if page_count > 1 else 1
     page_rows = rows[(page - 1) * PAGE_SIZE: page * PAGE_SIZE]
 
     show_table(page_rows, list_columns(module), "No records found.")
@@ -226,7 +226,8 @@ def action_buttons(user, module, record):
 
     # Delete sits on its own line and needs a tick first, so it is not clicked by accident.
     st.write("")
-    confirmed = st.checkbox("Tick to confirm delete (the record is hidden but kept in the history)")
+    confirmed = st.checkbox("Tick to confirm delete (the record is hidden but kept in the history)",
+                            key=f"confirm_delete_{module}_{record['id']}")
     if st.button("Delete", disabled=not confirmed):
         try:
             records.delete_record(module, record["id"], user)
@@ -343,6 +344,8 @@ def form_view(user, module, record):
 
         owner_ids = list(owner_names)
         current_owner = values.get("owner_id") if values.get("owner_id") in owner_ids else owner_ids[0]
+        if not is_new and values.get("owner_id") not in owner_ids:
+            st.warning(f"{values['owner']} is no longer an active Sales Executive. Choose a new owner below.")
         form["owner_id"] = st.selectbox("Assigned to", owner_ids, index=owner_ids.index(current_owner),
                                         format_func=owner_names.get)
         form["notes"] = st.text_area("Notes", value=values.get("notes") or "", max_chars=2000)

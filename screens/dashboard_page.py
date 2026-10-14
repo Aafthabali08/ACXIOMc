@@ -5,13 +5,12 @@ Dashboard. One page, three versions:
 - Sales Executive: my numbers, today's agenda with "Mark done", my pipeline
 """
 
-import pandas as pd
 import streamlit as st
 
 from logic import records
 from logic.dashboard_numbers import build_dashboard
 from logic.settings import ADMIN, MANAGER, STAGES, nice_date, role_title, rupees, today_in_india, to_date, win_rate
-from screens.helpers import message_for_next_run, period_filter, show_table
+from screens.helpers import bar_chart, message_for_next_run, period_filter, show_table
 
 
 def show(user):
@@ -55,13 +54,13 @@ def show(user):
         for lead in data["leads"]:
             lead_counts[lead["status"]] = lead_counts.get(lead["status"], 0) + 1
         if lead_counts:
-            st.bar_chart(pd.DataFrame({"Leads": lead_counts}))
+            bar_chart(list(lead_counts), {"Leads": list(lead_counts.values())})
         else:
             st.info("No leads in this period.")
 
     st.subheader("Pipeline by stage")
-    stage_totals = {stage: sum(row["amount"] for row in data["opportunities"] if row["stage"] == stage) for stage in STAGES}
-    st.bar_chart(pd.DataFrame({"Amount": stage_totals}))
+    stage_totals = [sum(row["amount"] for row in data["opportunities"] if row["stage"] == stage) for stage in STAGES]
+    bar_chart(STAGES, {"Amount": stage_totals})
 
     st.subheader("Deals closing in the next 30 days")
     show_table(data["closing_soon"], {
@@ -71,7 +70,8 @@ def show(user):
     }, "No open deals closing in the next 30 days.")
 
     st.subheader("Won sales - last six months")
-    st.bar_chart(pd.DataFrame(data["monthly_sales"]).set_index("Month"))
+    bar_chart([month["Month"] for month in data["monthly_sales"]],
+              {"Won sales": [month["Won sales"] for month in data["monthly_sales"]]})
 
     st.subheader("Recent activities")
     show_table(data["recent_activities"], {
@@ -91,7 +91,7 @@ def admin_section(data):
     left, right = st.columns(2)
     with left:
         st.write("**Users by role**")
-        st.bar_chart(pd.DataFrame({"Users": {role_title(role): count for role, count in data["users_per_role"].items()}}))
+        bar_chart([role_title(role) for role in data["users_per_role"]], {"Users": list(data["users_per_role"].values())})
     with right:
         st.write("**Newest users**")
         show_table(data["recent_users"], {
@@ -116,9 +116,10 @@ def team_section(data):
         "Overdue follow-ups": "overdue_followups",
     }, "No team members yet.")
     if data["team"]:
-        chart = pd.DataFrame(data["team"]).set_index("name")[["open_pipeline", "won_value"]]
-        chart.columns = ["Open pipeline", "Won value"]
-        st.bar_chart(chart)
+        bar_chart([row["name"] for row in data["team"]], {
+            "Open pipeline": [row["open_pipeline"] for row in data["team"]],
+            "Won value": [row["won_value"] for row in data["team"]],
+        })
 
 
 def followup_list(user, followups, empty_text):

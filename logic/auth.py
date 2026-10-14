@@ -12,7 +12,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from logic.audit import add_audit_entry
-from logic.database import execute, fetch_one, insert, update
+from logic.database import fetch_one, insert, update
 from logic.settings import LOCK_MINUTES, MAX_FAILED_LOGINS, SALES_EXECUTIVE, now_utc
 
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
